@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+aw.libs.redislib.configuration.PamCachingAutoConfiguration
+aw.libs.redislib.configuration.CacheInvalidationListener
