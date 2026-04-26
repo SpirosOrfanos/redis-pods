@@ -1,5 +1,7 @@
 package aw.libs.redislib.configuration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
@@ -16,6 +18,8 @@ import java.util.Map;
 
 @Component
 public class CacheInvalidationListener implements MessageListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(CacheInvalidationListener.class);
 
     private final Map<String, MultiTierCacheManager.MultiTierCache> caches = new ConcurrentHashMap<>();
 
@@ -44,23 +48,20 @@ public class CacheInvalidationListener implements MessageListener {
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        System.out.println("Message received " + message);
+        logger.debug("Message received {}", message);
         try {
             GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer();
             InvalidationMessage invalidation = (InvalidationMessage)
                     serializer.deserialize(message.getBody());
-
-            if (invalidation != null) {
-                handleInvalidation(invalidation);
-            }
+            handleInvalidation(invalidation);
         } catch (Exception e) {
-            System.err.println("Error processing cache invalidation message: " + e.getMessage());
+            logger.error("Error processing cache invalidation message: {}", e.getMessage());
         }
     }
 
     private void handleInvalidation(InvalidationMessage invalidation) {
         if (cacheManager == null) {
-            System.err.println("CacheManager not initialized yet");
+            logger.error("CacheManager not initialized yet");
             return;
         }
         Cache cache = cacheManager.getCache(invalidation.getCacheName());
