@@ -94,6 +94,7 @@ public class MultiTierCacheManager implements CacheManager {
         public ValueWrapper get(Object key) {
             logger.debug("get ValueWrapper {}", key);
             Object value = getInternal(key);
+            logger.debug("get Received ValueWrapper {}", value);
             return value != null ? new SimpleValueWrapper(value) : null;
         }
 
@@ -101,7 +102,10 @@ public class MultiTierCacheManager implements CacheManager {
         public <T> T get(Object key, Class<T> type) {
             logger.debug("get <T> T get {} {}",  key, type);
             Object value = getInternal(key);
-            return type.cast(value);
+            if (value != null && type.isAssignableFrom(value.getClass())) {
+                return type.cast(value);
+            }
+            return null;
         }
 
         @Override
@@ -110,6 +114,7 @@ public class MultiTierCacheManager implements CacheManager {
             String cacheKey = buildKey(key);
             Object value = localCache.getIfPresent(cacheKey);
             if (value != null) {
+                logger.debug("L1 cache hit for key: {}", key);
                 return (T) value;
             }
 
