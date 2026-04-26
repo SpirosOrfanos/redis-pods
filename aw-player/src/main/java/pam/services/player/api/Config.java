@@ -8,7 +8,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,30 +27,32 @@ public class Config {
 
         if (cache instanceof MultiTierCacheManager.MultiTierCache) {
             MultiTierCacheManager.MultiTierCache multiTierCache = (MultiTierCacheManager.MultiTierCache) cache.getNativeCache();
-            return multiTierCache.get(type, () -> {
-                var event = new InvalidationMessage(InvalidationMessage.Type.EVICT, "ownerCache", type);
+            var response = multiTierCache.get(type);
+            if (response == null) {
+                return multiTierCache.get(type, () -> {
+                    var event = new InvalidationMessage(InvalidationMessage.Type.EVICT, "ownerCache", type);
 
-                eventPublisher.publishEvent(event);
-                System.out.println("from cacvche");
-                return "ownerRepository.findByType" + (type);
-            });
+                    eventPublisher.publishEvent(event);
+                    System.out.println("from cache");
+                    return "ownerRepository.findByType" + (type);
+                });
+            }
+            System.out.println("direct return");
+            return response.toString();
+
         }
         var event = new InvalidationMessage(InvalidationMessage.Type.EVICT, "ownerCache", type);
         eventPublisher.publishEvent(event);
-        System.out.println("publish");
+        System.out.println("publish from db");
         return "ownerRepository.findByType" + (type);
     }
 
 
     @EventListener
     public void handleOwnerUpdate(InvalidationMessage event) {
-        // When data changes, evict from cache
-        System.out.println("received "+event);
+        System.out.println("handleOwnerUpdate "+event);
         Cache cache = cacheManager.getCache("ownerCache");
         cache.evict(event.getType());
-
-        // The invalidation message will be published through the cache
-        // All other pods will receive it and invalidate their L1 caches
     }
 
 }
