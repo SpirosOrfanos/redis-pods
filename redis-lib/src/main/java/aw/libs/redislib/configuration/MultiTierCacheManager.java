@@ -1,5 +1,7 @@
 package aw.libs.redislib.configuration;
 
+import jakarta.annotation.PostConstruct;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.cache.Cache;
@@ -22,8 +24,11 @@ public class MultiTierCacheManager implements CacheManager {
     private final ConcurrentHashMap<String, Cache> caches = new ConcurrentHashMap<>();
     private final RedisTemplate<String, Object> redisTemplate;
     private final Caffeine<Object, Object> caffeineBuilder;
+    private final ConfigProperties configProperties;
 
-    public MultiTierCacheManager(RedisConnectionFactory connectionFactory) {
+    public MultiTierCacheManager(RedisConnectionFactory connectionFactory,
+                                 ConfigProperties configProperties) {
+        this.configProperties = configProperties;
         this.redisTemplate = new RedisTemplate<>();
         this.redisTemplate.setConnectionFactory(connectionFactory);
         this.redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -31,12 +36,18 @@ public class MultiTierCacheManager implements CacheManager {
         this.redisTemplate.afterPropertiesSet();
         this.caffeineBuilder = Caffeine.newBuilder()
                 .maximumSize(10000)
-                .expireAfterWrite(1, TimeUnit.MINUTES)  // L1 expires quickly
-                .recordStats();  // For monitoring
+               // .expireAfterWrite(1, TimeUnit.MINUTES) ß
+                //.recordStats()
+                ;
+    }
+
+    @PostConstruct
+    public void post() {
+        this.configProperties.getCache().forEach(cache -> getCache(cache.getName()));
     }
 
     @Override
-    public Cache getCache(String name) {
+    public Cache getCache(@NonNull String  name) {
         return caches.computeIfAbsent(name, this::createMultiTierCache);
     }
 
@@ -100,6 +111,7 @@ public class MultiTierCacheManager implements CacheManager {
 
             value = redisTemplate.opsForValue().get(cacheKey);
             if (value != null) {
+                System.out.println("get <T> T get Callable add to local cache " + key + " : " + value);
                 localCache.put(cacheKey, value);
                 return (T) value;
             }
@@ -125,6 +137,7 @@ public class MultiTierCacheManager implements CacheManager {
             }
             value = redisTemplate.opsForValue().get(cacheKey);
             if (value != null) {
+                System.out.println("getInternal add to local cache " + key + " : " + value);
                 localCache.put(cacheKey, value);
                 return value;
             }
@@ -136,6 +149,7 @@ public class MultiTierCacheManager implements CacheManager {
         public void put(Object key, Object value) {
             System.out.println("put "+key);
             String cacheKey = buildKey(key);
+            System.out.println("put add to local cache " + key + " : " + value);
             localCache.put(cacheKey, value);
             redisTemplate.opsForValue().set(cacheKey, value, 10, TimeUnit.MINUTES);
             publishInvalidation(cacheKey);
@@ -163,7 +177,9 @@ public class MultiTierCacheManager implements CacheManager {
 
         private String buildKey(Object key) {
             System.out.println("buildKey " + key);
-            return REDIS_KEY_PREFIX + name + "::" + key.toString();
+            //String response = REDIS_KEY_PREFIX + name + "::" + key.toString();
+            //System.out.println("buildKey " + key + " " + response);
+            return key.toString();
         }
 
         private void publishInvalidation(String cacheKey) {

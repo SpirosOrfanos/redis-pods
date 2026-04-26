@@ -32,14 +32,14 @@ public class CacheInvalidationListener implements MessageListener {
         this.cacheManager = applicationContext.getBean(MultiTierCacheManager.class);
 
         // Optional: Pre-populate the caches map for faster access
-        if (this.cacheManager != null) {
+        /*if (this.cacheManager != null) {
             for (String cacheName : this.cacheManager.getCacheNames()) {
                 Cache cache = this.cacheManager.getCache(cacheName);
                 if (cache != null && cache.getNativeCache() instanceof MultiTierCacheManager.MultiTierCache) {
                     caches.put(cacheName, (MultiTierCacheManager.MultiTierCache) cache.getNativeCache());
                 }
             }
-        }
+        }*/
     }
 
     @Override

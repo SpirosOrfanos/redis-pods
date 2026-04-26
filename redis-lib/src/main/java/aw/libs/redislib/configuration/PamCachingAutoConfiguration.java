@@ -27,10 +27,10 @@ public class PamCachingAutoConfiguration {
     }
 
     @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
+    public RedisConnectionFactory redisConnectionFactory(ConfigProperties configProperties) {
         LettuceConnectionFactory factory = new LettuceConnectionFactory();
-        factory.setHostName("localhost");
-        factory.setPort(6379);
+        factory.setHostName(configProperties.getUrl());
+        factory.setPort(configProperties.getPort());
         factory.setDatabase(0);
         factory.setShutdownTimeout(100);
         factory.afterPropertiesSet();
@@ -52,7 +52,6 @@ public class PamCachingAutoConfiguration {
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
             CacheInvalidationListener invalidationListener) {
-
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(invalidationListener, new PatternTopic("cache-invalidation"));
@@ -60,7 +59,7 @@ public class PamCachingAutoConfiguration {
     }
 
     @Bean
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        return new MultiTierCacheManager(connectionFactory);
+    public CacheManager cacheManager(RedisConnectionFactory connectionFactory, ConfigProperties configProperties) {
+        return new MultiTierCacheManager(connectionFactory, configProperties);
     }
 }
