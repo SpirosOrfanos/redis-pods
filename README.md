@@ -1,3 +1,7 @@
+on root run
+
+docker-compose up -d 
+________________________________
 cd redis-lib
 
 mvn clean install
