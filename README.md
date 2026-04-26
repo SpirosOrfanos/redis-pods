@@ -1,6 +1,6 @@
 cd redis-lib
 
-mvn clean indtall
+mvn clean install
 
 cd aw-player
 
